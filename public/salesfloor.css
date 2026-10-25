@@ -79,6 +79,7 @@ body { -webkit-font-smoothing: antialiased; }
 .message-day { margin: 0 auto 5px; color: #929baa; font-size: 9px; }
 .status { text-transform: capitalize; }
 .composer { padding-bottom: 12px; }
+.fixed-sender { display: inline-block; padding: 7px 10px; border: 1px solid var(--border); background: #fafbfc; border-radius: 8px; font-size: 11px; font-weight: 600; }
 .quick-messages { display: flex; gap: 6px; align-items: center; margin-bottom: 9px; flex-wrap: wrap; }
 .quick-messages > span { color: #98a1ae; font-size: 8px; letter-spacing: .06em; margin-right: 3px; }
 .quick-messages button { font-size: 9px; border: 1px solid #e7ebf0; padding: 4px 8px; border-radius: 5px; background: #f9fafc; color: #778392; }

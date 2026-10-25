@@ -40,11 +40,10 @@ Set these environment variables in Vercel using the corresponding local `.env` v
 | `MONGOURI` | MongoDB connection string containing `/booran_sms_lab`; same cluster credentials as Sales Floor |
 | `MOBILEMESSAGE_USERNAME` | Same Mobile Message username as Sales Floor |
 | `MOBILEMESSAGE_PASSWORD` | Same Mobile Message password/API key as Sales Floor |
-| `MOBILEMESSAGE_SENDER_ID` | Existing approved sender; selectable active senders also load from the account |
-| `SMS_LAB_PASSWORD` | Separate workspace password, at least 12 characters |
+| `MOBILEMESSAGE_SENDER_ID` | The only allowed sender; fixed by the server and read-only in the interface |
+| `SMS_LAB_PASSWORD` | Separate workspace password, at least 10 characters |
 | `SMS_LAB_SESSION_SECRET` | Random signing secret, at least 32 characters |
 | `APP_URL` | `https://booran-sms-test.vercel.app` — canonical public HTTPS URL for verification links |
-| `SMS_LAB_REPLY_SENDER` | Optional preferred shared/dedicated number from the same account |
 
 `MOBILEMESSAGE_API_KEY` and `MOBILEMESSAGE_FROM` are supported aliases. Never make any credential a public/frontend environment variable. Vercel does not upload local `.env` automatically. Ensure your MongoDB user can create/read/write the separate database and your cluster permits Vercel connections. This project requires `MONGOURI` to select exactly `booran_sms_lab`; an absent database name or a CRM database name is rejected before connecting.
 
@@ -55,14 +54,14 @@ For a publicly accessible verification link, avoid Vercel deployment protection 
 ## Manager acceptance test
 
 1. Sign in and start a conversation with a mobile number you control.
-2. Select the approved branded sender. Send a message and check that the expected sender appears on the phone. Watch queued → sent → delivered when the carrier reports it. Queued means provider acceptance, not handset delivery.
-3. Select a **shared or dedicated** sender for two-way testing. Send another message, reply from the phone to that number, and keep the conversation open. Polling runs every five seconds; provider inbox/delivery checks are limited to roughly every 15 seconds. The reply appears in that same thread. Send a reply back from the app.
+2. Send a message from the configured sender and check that the expected sender appears on the phone. Watch queued → sent → delivered when the carrier reports it. Queued means provider acceptance, not handset delivery.
+3. With a reply-capable configured sender, send another message, reply from the phone to that number, and keep the conversation open. Polling runs every five seconds; provider inbox/delivery checks are limited to roughly every 15 seconds. The reply appears in that same thread. Send a reply back from the app.
 4. Click **Send verification SMS**. Open the link on the phone and enter the six-digit code from the SMS within ten minutes. The interface shows the phone as verified and adds a verification event to its thread. Codes/links are omitted from server history and UI responses. Links are single use with at most five guesses. This verifies possession of the test phone, not the SMS brand or business.
 5. Refresh/reopen the site and confirm the thread persists. Test a second number to confirm histories stay separate. Failed and unconfirmed attempts remain visible. Check Mobile Message before deliberately sending a new message after an unconfirmed attempt.
 
 ### Sender behavior matters
 
-The app lists active senders using Mobile Message's API. Business-name (`alpha`) senders are **one-way**: phones cannot reply to the branded name. Shared and dedicated numbers route replies through Mobile Message. An `own` mobile sender routes replies to that physical phone, not this inbox. The UI explains the selected sender's behavior. Branding in the SMS body and the Booran verification page can be used with a two-way number. A shared number supports replies only after an outgoing SMS. No new numbers are purchased or sender registrations changed by this project.
+The app validates only `MOBILEMESSAGE_SENDER_ID` using Mobile Message's API. Other account senders are never exposed to the browser or selectable. Every text and verification SMS uses the environment-configured sender; the API rejects attempts to override it. Business-name (`alpha`) senders are **one-way**: phones cannot reply to the branded name. Shared and dedicated numbers route replies through Mobile Message. An `own` mobile sender routes replies to that physical phone, not this inbox. The UI explains the selected sender's behavior. Branding in the SMS body and the Booran verification page can be used with a two-way number. A shared number supports replies only after an outgoing SMS. No new numbers are purchased or sender registrations changed by this project.
 
 See [Mobile Message sender options](https://help.mobilemessage.com.au/sending-receiving-sms/choosing-a-sender-what-are-the-options) and the [API documentation](https://mobilemessage.com.au/api-documentation).
 

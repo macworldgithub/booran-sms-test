@@ -25,7 +25,7 @@ function showView(next) {
   view = next;
   const views = {
     conversations: ['SMS Test Lab', 'Send, verify and reply. Your complete SMS testing workspace.', 'SMS conversations', 'inbox'],
-    senders: ['Senders & connection', 'Check your active senders and choose how replies return.', 'Senders & connection', 'senders'],
+    senders: ['Sender & connection', 'Check your configured sender and how replies return.', 'Sender & connection', 'senders'],
     guide: ['Testing guide', 'A simple walkthrough for your Booran SMS acceptance test.', 'Testing guide', 'guide'],
   };
   const [title, description, breadcrumb, nav] = views[next];
@@ -60,29 +60,21 @@ function renderThreads() {
 }
 async function loadThreads() { const data = await api('/threads'); threads = data.threads; renderThreads(); }
 function renderSenders() {
-  const select = $('sender'); const old = select.value;
-  select.replaceChildren();
-  for (const row of settings.senders) {
-    const option = node('option', '', `${row.label === row.sender ? row.sender : `${row.label} · ${row.sender}`}`); option.value = row.sender; select.append(option);
-  }
-  if (!settings.senders.length) { const option = node('option', '', 'No active senders available'); option.value = ''; select.append(option); }
-  if (settings.senders.some(s => s.sender === old)) select.value = old;
-  else if (settings.senders.some(s => s.sender === settings.preferred_sender)) select.value = settings.preferred_sender;
-  else select.value = settings.senders.find(s => s.reply_capable)?.sender || settings.senders.find(s => s.is_default)?.sender || select.value;
+  $('sender').textContent = settings.sender?.sender || 'Sender unavailable';
   senderHelp();
 }
 function senderHelp() {
-  const row = settings?.senders.find(s => s.sender === $('sender').value);
+  const row = settings?.sender;
   $('sender-type').textContent = row?.reply_capable ? 'Two-way SMS' : row?.type === 'own' ? 'Replies to phone' : 'One-way SMS';
   $('sender-type').classList.toggle('one-way', !row?.reply_capable);
-  $('sender-help').textContent = row?.reply_capable ? 'Reply from your phone to this number. Your reply appears in this conversation.' : row?.type === 'own' ? 'This is a personal mobile sender. Replies go to that mobile, so use a shared or dedicated number to test this inbox.' : 'A branded name cannot receive SMS replies. Choose a shared or dedicated number for the two-way test.';
+  $('sender-help').textContent = !row ? 'The configured SMS sender is unavailable. Check the connection.' : row.reply_capable ? 'Reply from your phone to this number. Your reply appears in this conversation.' : row.type === 'own' ? 'Replies to this sender go to its physical phone and cannot appear in this inbox.' : 'This branded sender supports outbound SMS only. SMS replies are not supported.';
   updateButtons();
 }
 function updateButtons() {
-  const unavailable = busy || !active || !settings?.senders.length || threads.find(t => t._id === active)?.unsubscribed;
+  const unavailable = busy || !active || !settings?.sender || threads.find(t => t._id === active)?.unsubscribed;
   $('send').disabled = Boolean(unavailable || !$('message').value.trim());
   $('verification-send').disabled = Boolean(unavailable || !settings?.app_url);
-  $('sender').disabled = busy; $('message').disabled = busy;
+  $('message').disabled = busy;
   $('send-label').textContent = busy ? 'Sending…' : 'Send SMS';
   for (const button of document.querySelectorAll('[data-template]')) button.disabled = busy;
 }
@@ -151,38 +143,33 @@ async function openThread(id) {
 }
 async function loadSettings() {
   settings = await api('/settings'); renderSenders();
-  notice('global-warning', settings.warning || (!settings.senders.length ? 'No active SMS senders found. Check your Mobile Message account.' : ''));
-  $('provider-state').textContent = settings.sms_configured && settings.senders.length ? 'Mobile Message connected' : 'Mobile Message needs configuration';
-  $('provider-dot').classList.toggle('danger-dot', !settings.senders.length);
+  notice('global-warning', settings.warning || (!settings.sender ? 'The configured SMS sender is unavailable. Check your Mobile Message account.' : ''));
+  $('provider-state').textContent = settings.sms_configured && settings.sender ? 'Mobile Message connected' : 'Mobile Message needs configuration';
+  $('provider-dot').classList.toggle('danger-dot', !settings.sender);
   $('site-state').textContent = settings.https ? 'HTTPS verification site configured' : 'Local test site · use a public HTTPS URL for phone verification links';
   renderConnection();
 }
 function renderConnection() {
-  const connected = settings.sms_configured && settings.senders.length > 0 && !settings.warning;
+  const connected = settings.sms_configured && Boolean(settings.sender) && !settings.warning;
   $('header-provider-status').textContent = connected ? 'SMS connected' : 'Needs setup';
   $('header-provider-dot').classList.toggle('danger-dot', !connected);
-  $('connection-status').textContent = connected ? 'Connected · active senders available' : 'Connection needs attention';
+  $('connection-status').textContent = connected ? 'Connected · configured sender available' : 'Connection needs attention';
   $('connection-status').classList.toggle('error', !connected);
   $('verification-site-status').textContent = settings.https ? 'Public HTTPS site configured' : 'Local testing';
   $('verification-site-url').textContent = settings.app_url || 'Configure the public site URL to enable SMS verification links.';
-  $('sender-total').textContent = `${settings.senders.length} active`;
+  $('sender-total').textContent = settings.sender ? 'Configured sender' : 'Unavailable';
   const table = $('sender-table'); table.replaceChildren();
-  if (!settings.senders.length) {
-    const row = node('tr'); const cell = node('td', '', settings.warning || 'No active senders available. Recheck the connection after configuration.'); cell.colSpan = 4; row.append(cell); table.append(row);
+  if (!settings.sender) {
+    const row = node('tr'); const cell = node('td', '', settings.warning || 'The configured sender is unavailable. Recheck the connection after configuration.'); cell.colSpan = 3; row.append(cell); table.append(row);
   }
-  for (const sender of settings.senders) {
+  if (settings.sender) {
+    const sender = settings.sender;
     const row = node('tr');
     const name = node('td'); name.append(node('strong', '', sender.sender));
     if (sender.label && sender.label !== sender.sender) name.append(node('small', '', sender.label));
     const type = node('td', '', ({ alpha: 'Branded name', dedicated: 'Dedicated number', shared: 'Shared test number', own: 'Personal mobile' })[sender.type] || sender.type || 'Other');
     const destination = node('td'); destination.append(node('span', `mini-badge${sender.reply_capable ? '' : ' one-way'}`, sender.reply_capable ? 'This interface' : sender.type === 'own' ? 'Personal phone' : 'Replies unavailable'));
-    const action = node('td'); const select = node('button', 'secondary', 'Use sender');
-    select.onclick = () => {
-      if (busy) return toast('Wait for the current send to finish.');
-      $('sender').value = sender.sender; senderHelp(); showView('conversations');
-      if (!active) newDialog(); else $('message').focus();
-    };
-    action.append(select); row.append(name, type, destination, action); table.append(row);
+    row.append(name, type, destination); table.append(row);
   }
 }
 async function start() {
@@ -206,7 +193,7 @@ async function send(kind) {
   if (busy || !active) return;
   $('send-error').textContent = '';
   const body = $('message').value;
-  const payload = { body: kind === 'text' ? body : '', kind, sender: $('sender').value };
+  const payload = { body: kind === 'text' ? body : '', kind };
   const fingerprint = JSON.stringify([active, payload]);
   if (!draftRequest || draftRequest.fingerprint !== fingerprint) draftRequest = { fingerprint, id: crypto.randomUUID() };
   busy = true; updateButtons();
@@ -235,7 +222,6 @@ $('new-form').onsubmit = async event => { event.preventDefault(); event.submitte
 $('search').oninput = renderThreads;
 $('refresh-list').onclick = async () => { try { await Promise.all([loadThreads(), loadSettings()]); } catch (error) { toast(error.message); } };
 $('refresh-thread').onclick = () => refreshThread();
-$('sender').onchange = senderHelp;
 $('message').oninput = updateCounter;
 $('send-form').onsubmit = event => { event.preventDefault(); send('text'); };
 $('verification-send').onclick = () => send('verification');
@@ -250,7 +236,7 @@ $('recheck-connection').onclick = async event => {
 };
 for (const button of document.querySelectorAll('[data-template]')) button.onclick = () => {
   $('message').value = button.dataset.template === 'branded' ? 'Hi from Booran Motors. This is a branded SMS test. Please check the sender name on your phone.' : 'Hi from Booran Motors. This is our two-way SMS test. Please reply to this message to confirm it arrived.';
-  if (button.dataset.template === 'reply' && !settings.senders.find(s => s.sender === $('sender').value)?.reply_capable) toast('Choose a shared or dedicated number so the reply can return to this interface.');
+  if (button.dataset.template === 'reply' && !settings.sender?.reply_capable) toast('The configured sender does not support replies in this interface.');
   updateCounter(); $('message').focus();
 };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && active && view === 'conversations' && !$('workspace').hidden) refreshThread(); });

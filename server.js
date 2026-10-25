@@ -3,7 +3,7 @@ require('dotenv').config({ path: path.join(__dirname, '.env'), quiet: true });
 const express = require('express');
 const { randomUUID, randomInt, randomBytes } = require('node:crypto');
 const { database } = require('./lib/database');
-const { createProvider } = require('./lib/provider');
+const { createProvider, configuredSender } = require('./lib/provider');
 const { createAuth } = require('./lib/auth');
 const { fail, phone, message, requestId, hash, publicMessage } = require('./lib/validation');
 const { syncThread } = require('./lib/sync');
@@ -68,10 +68,10 @@ function createApp({ db: getDb = database, provider = createProvider(), env = pr
   }));
   app.use('/api', auth.requireAuth);
   app.get('/api/settings', route(async (req, res) => {
-    let senders = [], warning;
-    try { senders = await provider.senders(); } catch (error) { warning = error.message; }
+    let sender = null, warning;
+    try { sender = await provider.sender(); } catch (error) { warning = error.message; }
     let url; try { url = publicUrl(); } catch {}
-    res.json({ sms_configured: provider.configured(), senders, warning, preferred_sender: env.SMS_LAB_REPLY_SENDER || env.MOBILEMESSAGE_SENDER_ID || env.MOBILEMESSAGE_FROM || '', app_url: url, https: url?.startsWith('https:') || false });
+    res.json({ sms_configured: provider.configured(), sender, warning, app_url: url, https: url?.startsWith('https:') || false });
   }));
   app.get('/api/threads', route(async (req, res) => {
     const rows = await (await getDb()).collection('threads').find({}).sort({ updated_at: -1 }).limit(200).toArray();
@@ -105,7 +105,8 @@ function createApp({ db: getDb = database, provider = createProvider(), env = pr
     const { db, thread } = await getThread(req);
     const id = requestId(req.body.request_id);
     const kind = req.body.kind === 'verification' ? 'verification' : 'text';
-    const sender = typeof req.body.sender === 'string' ? req.body.sender : '';
+    const sender = configuredSender(env);
+    if (req.body.sender !== undefined && req.body.sender !== sender) fail('Only the sender configured in the environment may be used.');
     let body = kind === 'text' ? message(req.body.body) : '';
     const fingerprint = hash(JSON.stringify([thread._id, kind, sender, body]));
     const existing = await db.collection('messages').findOne({ _id: id });
@@ -115,8 +116,8 @@ function createApp({ db: getDb = database, provider = createProvider(), env = pr
     }
     if (thread.unsubscribed) fail('This recipient has opted out. Use another test recipient.', 409);
     if (!provider.configured()) fail('Mobile Message is not configured.', 503);
-    const senders = await provider.senders();
-    if (!senders.some(row => row.sender === sender)) fail('Choose an active sender from this Mobile Message account.');
+    const approved = await provider.sender();
+    if (!sender || approved?.sender !== sender) fail('The configured sender is not available on this Mobile Message account.', 503);
     await auth.limit(db, 'send:workspace', 60, 3600);
     await auth.limit(db, `send:${thread._id}`, 12, 60);
     let verification;

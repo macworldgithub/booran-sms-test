@@ -13,7 +13,6 @@ const values = {
   MOBILEMESSAGE_USERNAME: existing.MOBILEMESSAGE_USERNAME || '',
   MOBILEMESSAGE_PASSWORD: existing.MOBILEMESSAGE_PASSWORD || existing.MOBILEMESSAGE_API_KEY || '',
   MOBILEMESSAGE_SENDER_ID: existing.MOBILEMESSAGE_SENDER_ID || existing.MOBILEMESSAGE_FROM || '',
-  SMS_LAB_REPLY_SENDER: '',
   SMS_LAB_PASSWORD: randomBytes(18).toString('base64url'),
   SMS_LAB_SESSION_SECRET: randomBytes(48).toString('hex'),
   APP_URL: 'https://booran-sms-test.vercel.app',

@@ -42,7 +42,7 @@ test('frontend navigation switches to sender details and guide, then restores co
   run("showView('senders')");
   assert.equal(document.getElementById('conversations-view').hidden, true);
   assert.equal(document.getElementById('senders-view').hidden, false);
-  assert.equal(document.getElementById('breadcrumb-view').textContent, 'Senders & connection');
+  assert.equal(document.getElementById('breadcrumb-view').textContent, 'Sender & connection');
   run("showView('guide')");
   assert.equal(document.getElementById('guide-view').hidden, false);
   assert.equal(document.getElementById('senders-view').hidden, true);

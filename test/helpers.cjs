@@ -44,14 +44,15 @@ function fixtureDb(records = {}) {
   }
   return { collection, command: async () => ({ ok: 1 }) };
 }
-const fixtureEnv = { SMS_LAB_PASSWORD: 'test-password-only', SMS_LAB_SESSION_SECRET: 'test-signing-key-that-is-longer-than-32-characters', APP_URL: 'https://sms-test.example' };
+const fixtureEnv = { SMS_LAB_PASSWORD: 'test-password-only', SMS_LAB_SESSION_SECRET: 'test-signing-key-that-is-longer-than-32-characters', APP_URL: 'https://sms-test.example', MOBILEMESSAGE_SENDER_ID: '61400000000' };
 function fakeProvider(overrides = {}) {
-  return { configured: () => true, senders: async () => [{ sender: '61400000000', type: 'dedicated', reply_capable: true, label: 'Test number' }, { sender: 'BOORAN', type: 'alpha', reply_capable: false, label: 'Booran' }], send: async () => ({ status: 'queued', provider_message_id: 'provider-1' }), inbound: async () => ({ results: [], total: 0 }), receipt: async () => null, ...overrides };
+  return { configured: () => true, sender: async () => ({ sender: '61400000000', type: 'dedicated', reply_capable: true, label: 'Test number' }), send: async () => ({ status: 'queued', provider_message_id: 'provider-1' }), inbound: async () => ({ results: [], total: 0 }), receipt: async () => null, ...overrides };
 }
 async function harness(t, options = {}) {
   const records = options.records || {};
   const db = fixtureDb(records);
-  const app = createApp({ db: async () => db, env: { ...fixtureEnv, ...options.env }, provider: fakeProvider(options.provider) });
+  const env = { ...fixtureEnv, ...options.env };
+  const app = createApp({ db: async () => db, env, provider: fakeProvider(options.provider) });
   const server = app.listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   t.after(() => new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }));
@@ -61,7 +62,7 @@ async function harness(t, options = {}) {
     const response = await fetch(`${base}/api${path}`, { method, headers: { 'content-type': 'application/json', cookie, ...headers }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
     return { status: response.status, body: await response.json(), headers: response.headers };
   }
-  const login = await request('/login', 'POST', { password: fixtureEnv.SMS_LAB_PASSWORD });
+  const login = await request('/login', 'POST', { password: env.SMS_LAB_PASSWORD });
   cookie = login.headers.get('set-cookie')?.split(';')[0] || '';
   async function thread() { return (await request('/threads', 'POST', { phone: '0412 345 678', name: 'Test phone' })).body.thread; }
   return { request, records, thread, base, cookie };

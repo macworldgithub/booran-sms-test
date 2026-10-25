@@ -150,25 +150,28 @@ test('send attempts are rate limited across instances through the shared databas
   assert.equal((await request(`/threads/${a._id}/messages`, 'POST', payload())).status, 429);
 });
 
-test('provider uses documented request shape and distinguishes own phones from two-way senders', async () => {
+test('provider exposes and sends only the configured sender even when other account senders exist', async () => {
   const calls = [];
-  const env = { MOBILEMESSAGE_USERNAME: 'fixture', MOBILEMESSAGE_PASSWORD: 'fixture-secret' };
+  const env = { MOBILEMESSAGE_USERNAME: 'fixture', MOBILEMESSAGE_PASSWORD: 'fixture-secret', MOBILEMESSAGE_SENDER_ID: '+61400000000' };
   const provider = createProvider(env, async (url, options) => {
     calls.push({ url, options });
     if (url.endsWith('/senders')) return { ok: true, json: async () => ({ status: 'complete', results: [{ sender: 'BOORAN', type: 'alpha' }, { sender: '61400000000', type: 'dedicated' }, { sender: '61411111111', type: 'own' }] }) };
     return { ok: true, status: 200, json: async () => ({ results: [{ status: 'success', message_id: 'id-1' }] }) };
   });
-  assert.deepEqual((await provider.senders()).map(row => row.reply_capable), [false, true, false]);
+  assert.equal((await provider.sender()).sender, '61400000000');
+  assert.equal((await provider.sender()).reply_capable, true);
   assert.equal((await provider.send({ phone: '+61412345678', body: 'test', sender: 'BOORAN', id: 'lab:test' })).status, 'queued');
   assert.equal(calls[1].options.headers.Authorization, `Basic ${Buffer.from('fixture:fixture-secret').toString('base64')}`);
-  assert.deepEqual(JSON.parse(calls[1].options.body), { enable_unicode: true, messages: [{ to: '+61412345678', message: 'test', sender: 'BOORAN', custom_ref: 'lab:test' }] });
+  assert.deepEqual(JSON.parse(calls[1].options.body), { enable_unicode: true, messages: [{ to: '+61412345678', message: 'test', sender: '61400000000', custom_ref: 'lab:test' }] });
+  const missingSender = createProvider({ ...env, MOBILEMESSAGE_SENDER_ID: 'UNAVAILABLE' }, async () => ({ ok: true, json: async () => ({ status: 'complete', results: [{ sender: '61400000000', type: 'dedicated' }] }) }));
+  await assert.rejects(missingSender.sender(), /configured.*not active/);
   const unavailable = createProvider(env, async () => { throw new Error('Timeout'); });
   assert.equal((await unavailable.send({})).status, 'unknown');
 });
 
 test('provider receipt rejects mismatched recipient/message and recovers unknown acceptance by reference', async () => {
   let result = { to: '61499999999', message_id: 'id-1', custom_ref: 'lab:1', status: 'delivered' };
-  const provider = createProvider({ MOBILEMESSAGE_USERNAME: 'fixture', MOBILEMESSAGE_PASSWORD: 'fixture' }, async () => ({ ok: true, json: async () => ({ results: [result] }) }));
+  const provider = createProvider({ MOBILEMESSAGE_USERNAME: 'fixture', MOBILEMESSAGE_PASSWORD: 'fixture', MOBILEMESSAGE_SENDER_ID: '61400000000' }, async () => ({ ok: true, json: async () => ({ results: [result] }) }));
   const row = { _id: 'lab:1', phone: '+61412345678', provider_message_id: 'id-1' };
   assert.equal(await provider.receipt(row), null);
   result = { ...result, to: '61412345678', message_id: 'other' };
@@ -183,4 +186,27 @@ test('serves branded UI and public verification assets with security headers', a
     assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   }
   assert.equal((await fetch(base + '/.env')).status, 404);
+});
+
+test('server uses only its configured sender and rejects a browser override without sending', async t => {
+  const sent = [];
+  const { request, thread } = await harness(t, { provider: { send: async value => { sent.push(value); return { status: 'queued' }; } } });
+  const settings = await request('/settings');
+  assert.equal(settings.body.sender.sender, '61400000000');
+  assert.equal(settings.body.senders, undefined);
+  const a = await thread();
+  const { sender, ...noSender } = payload();
+  assert.equal((await request(`/threads/${a._id}/messages`, 'POST', noSender)).status, 200);
+  assert.equal(sent[0].sender, '61400000000');
+  assert.equal((await request(`/threads/${a._id}/messages`, 'POST', payload({ sender: 'BOORAN' }))).status, 400);
+  assert.equal(sent.length, 1);
+});
+
+test('configured ten-character workspace password can sign in', async t => {
+  const password = 'test-pass1';
+  assert.equal(password.length, 10);
+  const { request } = await harness(t, { env: { SMS_LAB_PASSWORD: password } });
+  assert.equal((await request('/session')).body.authenticated, true);
+  assert.equal((await request('/login', 'POST', { password })).status, 200);
+  assert.equal((await request('/login', 'POST', { password: 'wrong-password' })).status, 401);
 });

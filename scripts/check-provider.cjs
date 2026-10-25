@@ -6,8 +6,8 @@ const { mongoClient } = require('../lib/database');
 (async () => {
   let failed = false;
   try {
-    const senders = await createProvider().senders();
-    console.log(JSON.stringify({ provider: 'connected', senders: senders.map(({ sender, type, reply_capable }) => ({ sender, type, reply_capable })) }, null, 2));
+    const { sender, type, reply_capable } = await createProvider().sender();
+    console.log(JSON.stringify({ provider: 'connected', sender, type, reply_capable }, null, 2));
   } catch (error) { console.log(JSON.stringify({ provider: 'unavailable', error: error.message })); failed = true; }
   let client;
   try {
