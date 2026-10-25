@@ -2,6 +2,8 @@
 
 A standalone test interface styled after Booran Sales Floor. Send real Mobile Message SMS, see carrier delivery results, reply from a handset into the same conversation, and test a six-digit verification SMS on a public Booran verification page. The provider account is shared with Sales Floor; the app, login, database and history are separate.
 
+Production site: **https://booran-sms-test.vercel.app**. Set `APP_URL=https://booran-sms-test.vercel.app` locally and in Vercel so SMS verification links use this domain.
+
 ## Local setup
 
 The complete frontend is included in `public/`: a Sales Floor-style sign-in screen, graphite sidebar, responsive conversation inbox, live message status cards, sender connection screen, quick-message templates and a manager testing guide. The phone verification page uses the same Booran branding. The frontend uses plain HTML/CSS/JavaScript, served by the Express API on one origin, with no separate frontend deployment needed.
@@ -41,14 +43,14 @@ Set these environment variables in Vercel using the corresponding local `.env` v
 | `MOBILEMESSAGE_SENDER_ID` | Existing approved sender; selectable active senders also load from the account |
 | `SMS_LAB_PASSWORD` | Separate workspace password, at least 12 characters |
 | `SMS_LAB_SESSION_SECRET` | Random signing secret, at least 32 characters |
-| `APP_URL` | Canonical public HTTPS URL, e.g. `https://YOUR-PROJECT.vercel.app` |
+| `APP_URL` | `https://booran-sms-test.vercel.app` — canonical public HTTPS URL for verification links |
 | `SMS_LAB_REPLY_SENDER` | Optional preferred shared/dedicated number from the same account |
 
 `MOBILEMESSAGE_API_KEY` and `MOBILEMESSAGE_FROM` are supported aliases. Never make any credential a public/frontend environment variable. Vercel does not upload local `.env` automatically. Ensure your MongoDB user can create/read/write the separate database and your cluster permits Vercel connections. This project requires `MONGOURI` to select exactly `booran_sms_lab`; an absent database name or a CRM database name is rejected before connecting.
 
-Deploy, then set `APP_URL` to the deployment's stable HTTPS domain and redeploy. If using a custom domain, connect it in Vercel and set `APP_URL` to that domain. Vercel HTTPS secures the site; it does **not** register/approve a branded SMS sender or verify ownership of a business with Mobile Message. Sender approval must already exist on the provider account. `/api/health` returns 200 only when the database, workspace login and SMS credentials are configured; it does not send a message or confirm provider authentication. Use `npm run check:provider` for a read-only credential/sender check.
+Set `APP_URL=https://booran-sms-test.vercel.app` in Vercel before deploying. Changes to Vercel environment variables apply to a new deployment, so redeploy after updating an existing deployment's variables. If using a custom domain later, connect it in Vercel and set `APP_URL` to that domain. Vercel HTTPS secures the site; it does **not** register/approve a branded SMS sender or verify ownership of a business with Mobile Message. Sender approval must already exist on the provider account. `/api/health` returns 200 only when the database, workspace login and SMS credentials are configured; it does not send a message or confirm provider authentication. Use `npm run check:provider` for a read-only credential/sender check.
 
-For a publicly accessible verification link, avoid Vercel deployment protection on the canonical domain or allow `/verify/*`, `/api/verify/*`, `/styles.css`, `/verify.js`, `/favicon.png` and `/booran-logo.png` through it. The inbox and sending APIs retain their own password login. Recipients do not need a workspace account. Localhost links cannot be opened on another phone; use the deployed HTTPS URL for handset testing.
+For a publicly accessible verification link, avoid Vercel deployment protection on the canonical domain or allow `/verify/*`, `/api/verify/*`, `/styles.css`, `/verify.js`, `/favicon.png` and `/booran-logo.png` through it. The inbox and sending APIs retain their own password login. Recipients do not need a workspace account. Localhost links cannot be opened on another phone; use the deployed HTTPS URL for handset testing. When running locally with the production `APP_URL`, the phone link opens the deployed app; both instances must use the same `MONGOURI` database and `SMS_LAB_SESSION_SECRET` for that verification code to work.
 
 ## Manager acceptance test
 

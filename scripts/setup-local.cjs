@@ -16,7 +16,7 @@ const values = {
   SMS_LAB_REPLY_SENDER: '',
   SMS_LAB_PASSWORD: randomBytes(18).toString('base64url'),
   SMS_LAB_SESSION_SECRET: randomBytes(48).toString('hex'),
-  APP_URL: 'http://localhost:3100',
+  APP_URL: 'https://booran-sms-test.vercel.app',
   PORT: '3100',
 };
 fs.writeFileSync(target, '# Local SMS Lab configuration. Do not commit or share.\n' + Object.entries(values).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join('\n') + '\n', { mode: 0o600, flag: 'wx' });
