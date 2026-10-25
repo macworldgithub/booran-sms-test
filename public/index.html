@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
   <meta name="theme-color" content="#171b22">
   <title>Booran · SMS Test Lab</title>
   <meta name="description" content="Booran Motors SMS testing workspace. Test branded messages, verification and two-way conversations.">
@@ -70,7 +70,7 @@
       <nav class="mobile-tabs" aria-label="Mobile workspace navigation"><button id="mobile-inbox" class="active">Conversations</button><button id="mobile-senders">Sender</button><button id="mobile-guide">Test guide</button></nav>
 
       <div class="page-content">
-        <div class="page-heading"><div><div class="eyebrow">SALES FLOOR COMMUNICATIONS</div><h1 id="page-title">SMS Test Lab<span class="red-dot">.</span></h1><p id="page-description">Send, verify and reply. Your complete SMS testing workspace.</p></div><button id="new-thread" class="primary"><svg class="icon"><use href="#i-plus"/></svg><span>New test conversation</span></button></div>
+        <div class="page-heading"><div><div class="eyebrow">SALES FLOOR COMMUNICATIONS</div><h1 id="page-title">SMS Test Lab<span class="red-dot">.</span></h1><p id="page-description">Send, verify and reply. Your complete SMS testing workspace.</p></div><button id="new-thread" class="primary" aria-label="New test conversation"><svg class="icon"><use href="#i-plus"/></svg><span>New test conversation</span></button></div>
         <div id="global-warning" class="notice warning" role="status" hidden></div>
 
         <section id="conversations-view">
@@ -80,16 +80,16 @@
             <div><span class="metric-icon blue"><svg class="icon"><use href="#i-receive"/></svg></span><div><small>INBOUND REPLIES</small><strong id="received-count">0</strong></div><span class="metric-caption">Received in this thread</span></div>
             <div><span class="metric-icon amber"><svg class="icon"><use href="#i-shield"/></svg></span><div><small>PHONE VERIFICATION</small><strong id="verified-state" class="metric-word">Not verified</strong></div><span class="metric-caption">Current conversation</span></div>
           </section>
-          <section class="inbox-shell">
+          <section id="inbox-shell" class="inbox-shell" data-panel="list">
             <div class="conversation-list">
-              <div class="list-heading"><h2>Conversations <span id="list-count">0</span></h2><button id="refresh-list" class="icon-button" aria-label="Refresh conversations" title="Refresh conversations"><svg class="icon"><use href="#i-refresh"/></svg></button></div>
+              <div class="list-heading"><h2 id="conversations-heading" tabindex="-1">Conversations <span id="list-count">0</span></h2><button id="refresh-list" class="icon-button" aria-label="Refresh conversations" title="Refresh conversations"><svg class="icon"><use href="#i-refresh"/></svg></button></div>
               <label class="search"><svg class="icon"><use href="#i-search"/></svg><input id="search" type="search" placeholder="Search name or mobile" aria-label="Search conversations"></label>
               <div id="threads" class="thread-list"></div>
               <div class="list-footer"><span class="live-dot"></span> Refreshes while you’re here</div>
             </div>
             <div id="empty-state" class="empty-state"><div class="empty-art"><svg class="icon"><use href="#i-message"/></svg><span><svg class="icon"><use href="#i-check"/></svg></span></div><span class="eyebrow">READY WHEN YOU ARE</span><h2>Let’s start a conversation.</h2><p>Add your test phone and send your first SMS.<br>Your messages and replies will appear right here.</p><button id="empty-new" class="primary"><svg class="icon"><use href="#i-plus"/></svg> Start a conversation</button><div class="empty-steps"><span><b>01</b> Send a test</span><span><b>02</b> Check your phone</span><span><b>03</b> Reply here</span></div></div>
             <div id="thread-panel" class="thread-panel" hidden>
-              <header class="thread-header"><span id="contact-avatar" class="avatar large">T</span><div class="contact"><h2 id="contact-name"></h2><span id="contact-phone"></span><span id="phone-badge" class="mini-badge" hidden>Phone verified</span></div><button id="refresh-thread" class="secondary"><svg class="icon"><use href="#i-refresh"/></svg><span>Refresh</span></button></header>
+              <header class="thread-header"><button id="back-to-conversations" class="icon-button back-to-conversations" type="button" aria-label="Back to conversations"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><span id="contact-avatar" class="avatar large">T</span><div class="contact"><h2 id="contact-name"></h2><span id="contact-phone"></span><span id="phone-badge" class="mini-badge" hidden>Phone verified</span></div><button id="refresh-thread" class="secondary"><svg class="icon"><use href="#i-refresh"/></svg><span>Refresh</span></button></header>
               <div id="sync-warning" class="notice warning" role="status" hidden></div>
               <div id="messages" class="messages" role="log" aria-label="SMS conversation"></div>
               <div class="composer">

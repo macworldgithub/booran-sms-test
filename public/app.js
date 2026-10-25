@@ -21,6 +21,14 @@ function notice(id, text) { $(id).textContent = text || ''; $(id).hidden = !text
 function initials(name) { return name.split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase(); }
 function time(value) { return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 function showLogin() { clearInterval(timer); $('workspace').hidden = true; $('login-screen').hidden = false; }
+function showConversationPanel(panel) {
+  $('inbox-shell').setAttribute('data-panel', panel);
+  if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('inbox-shell').scrollIntoView({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' });
+    if (panel === 'list') $('conversations-heading').focus({ preventScroll: true });
+  }
+}
 function showView(next) {
   view = next;
   const views = {
@@ -134,6 +142,7 @@ async function openThread(id) {
   const thread = threads.find(row => row._id === id);
   $('contact-name').textContent = thread.name; $('contact-phone').textContent = thread.phone; $('contact-avatar').textContent = initials(thread.name);
   $('empty-state').hidden = true; $('thread-panel').hidden = false;
+  showConversationPanel('thread');
   $('messages').replaceChildren(node('p', 'message-empty', 'Loading conversation…'));
   $('message').value = drafts.get(id) || ''; $('send-error').textContent = '';
   updateCounter(); renderThreads(); renderMetrics(thread); notice('sync-warning', '');
@@ -166,9 +175,12 @@ function renderConnection() {
     const sender = settings.sender;
     const row = node('tr');
     const name = node('td'); name.append(node('strong', '', sender.sender));
+    name.setAttribute('data-label', 'Sender');
     if (sender.label && sender.label !== sender.sender) name.append(node('small', '', sender.label));
     const type = node('td', '', ({ alpha: 'Branded name', dedicated: 'Dedicated number', shared: 'Shared test number', own: 'Personal mobile' })[sender.type] || sender.type || 'Other');
+    type.setAttribute('data-label', 'Type');
     const destination = node('td'); destination.append(node('span', `mini-badge${sender.reply_capable ? '' : ' one-way'}`, sender.reply_capable ? 'This interface' : sender.type === 'own' ? 'Personal phone' : 'Replies unavailable'));
+    destination.setAttribute('data-label', 'Replies');
     row.append(name, type, destination); table.append(row);
   }
 }
@@ -222,6 +234,7 @@ $('new-form').onsubmit = async event => { event.preventDefault(); event.submitte
 $('search').oninput = renderThreads;
 $('refresh-list').onclick = async () => { try { await Promise.all([loadThreads(), loadSettings()]); } catch (error) { toast(error.message); } };
 $('refresh-thread').onclick = () => refreshThread();
+$('back-to-conversations').onclick = () => showConversationPanel('list');
 $('message').oninput = updateCounter;
 $('send-form').onsubmit = event => { event.preventDefault(); send('text'); };
 $('verification-send').onclick = () => send('verification');
@@ -240,4 +253,10 @@ for (const button of document.querySelectorAll('[data-template]')) button.onclic
   updateCounter(); $('message').focus();
 };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && active && view === 'conversations' && !$('workspace').hidden) refreshThread(); });
+// Track the usable screen height when a phone's keyboard or browser chrome moves.
+if (typeof window !== 'undefined' && window.visualViewport) {
+  const fitViewport = () => document.documentElement.style.setProperty('--usable-height', `${Math.round(window.visualViewport.height)}px`);
+  window.visualViewport.addEventListener('resize', fitViewport);
+  fitViewport();
+}
 api('/session').then(data => { if (data.authenticated) start(); else { showLogin(); if (!data.configured) $('login-error').textContent = 'Run npm run setup:local or configure SMS_LAB_PASSWORD and SMS_LAB_SESSION_SECRET.'; } }).catch(error => { $('login-error').textContent = error.message; });
