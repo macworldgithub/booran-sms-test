@@ -1,0 +1,21 @@
+{
+  "name": "booran-sms-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone Booran SMS testing workspace for Mobile Message",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "build": "node scripts/check.cjs",
+    "test": "node --test test/*.test.cjs",
+    "setup:local": "node scripts/setup-local.cjs",
+    "check:provider": "node scripts/check-provider.cjs"
+  },
+  "engines": { "node": "22.x" },
+  "dependencies": {
+    "dotenv": "^18.0.7",
+    "express": "^4.21.2",
+    "mongodb": "^7.7.0"
+  }
+}
